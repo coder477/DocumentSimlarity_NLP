@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+  <title> Visual </title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+  <style>
+
+    .node {
+      stroke: #fff;
+      stroke-width: 1.5px; 
+    }
+
+    .link {
+      stroke: #999;
+      stroke-opacity: .6;
+    }
+
+    body {
+      font-family: "Helvetica Neue", Helvetica, sans-serif;
+      margin: 1em auto 4em auto;
+      position: relative;
+      tab-size: 2;
+      width: 960px;
+    }
+    h1 {
+      font-size: 64px;
+      font-weight: 300;
+      letter-spacing: -2px;
+      margin: .3em 0 .1em 0;
+    }
+    h2{
+      font-size: 32px;
+      font-weight: 300;
+      letter-spacing: -2px;
+      margin: .3em 0 .1em 0;
+    }
+
+</style>
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="{{ url_for('static', filename='js/d3.layout.cloud.js') }}"></script>
+</head>
+
+<body>
+  <h1>Graph representation</h1>
+  <p>Node represents sentence or Doc. Link width represents similarty</p>
+  <div class="fcl" style="border: thin solid black"></div>
+  <p></p>
+  <p>similarity threshold(min 0 max 1 step size of 0.1)</p>
+  <input style="width:300px"id="slide" type="range" class="slider" min="0" max="1" step="0.1" onchange="threshold(this.value)">
+  <div class="row other_visual" style="padding-top:30px">
+      <div class="col-md-6" >
+          <h2>Word Cloud</h2>
+          <div class="wordcloud" >
+          </div>
+      </div>
+      <div class="col-md-6"style="border: thin solid black">
+        <p> Document 1</p>
+        <textarea rows="8" cols="60" id="firstDoc"></textarea>
+        <p> Document 2</p>
+        <textarea rows="8" cols="60" id="secondDoc"></textarea>
+        <p>The similarity value is <span id="result">1</span></p>
+      </div>
+  </div>
+
+<script>
+var graph = {{graph|safe}}
+graphRec=JSON.parse(JSON.stringify(graph));
+console.log(graph)
+
+var width = 960,
+    height = 500;
+
+var color = d3.scale.category20b();
+
+var force = d3.layout.force()
+    .charge(-120)
+    .linkDistance(30)
+    .size([width, height]);
+
+    //---Insert-------
+var node_drag = d3.behavior.drag()
+        .on("dragstart", dragstart)
+        .on("drag", dragmove)
+        .on("dragend", dragend);
+
+    function dragstart(d, i) {
+        force.stop() // stops the force auto positioning before you start dragging
+    }
+
+    function dragmove(d, i) {
+        d.px += d3.event.dx;
+        d.py += d3.event.dy;
+        d.x += d3.event.dx;
+        d.y += d3.event.dy; 
+    }
+
+    function dragend(d, i) {
+        d.fixed = true; // of course set the node to fixed so the force doesn't include the node in its auto positioning stuff
+        force.resume();
+    }
+
+    function releasenode(d) {
+        d.fixed = false; // of course set the node to fixed so the force doesn't include the node in its auto positioning stuff
+        //force.resume();
+    }
+
+
+//---End Insert------
+
+var svg = d3.select(".fcl").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+
+force
+    .nodes(graph.nodes)
+    .links(graph.links)
+    .start();
+
+var link = svg.selectAll(".link")
+    .data(graph.links)
+    .enter().append("line")
+    .attr("class", "link")
+    .style("stroke-width", function(d) { return d.value*10; })
+    .on('click',function(d){
+      document.getElementById("firstDoc").value = d['source']['name'];
+      document.getElementById("secondDoc").value = d['target']['name'];
+      document.getElementById("result").innerHTML = d.value;
+    });
+
+var node = svg.selectAll(".node")
+    .data(graph.nodes)
+  .enter().append("circle")
+    .attr("class", "node")
+    .attr("r", 8)
+    .style("fill", function(d) { return color(d.length); })
+    .on('dblclick', releasenode)
+.call(node_drag); //Added;
+
+node.append("title")
+    .text(function(d) { return d.name; });
+link.append("title")
+    .text(function(d) { return d.value;});
+
+force.on("tick", function() {
+  link.attr("x1", function(d) { return d.source.x; })
+      .attr("y1", function(d) { return d.source.y; })
+      .attr("x2", function(d) { return d.target.x; })
+      .attr("y2", function(d) { return d.target.y; });
+
+  node.attr("cx", function(d) { return d.x; })
+      .attr("cy", function(d) { return d.y; });
+});
+// threshold
+function threshold(thresh) {
+    console.log("in threshold");
+    graph.links.splice(0, graph.links.length);
+
+    for (var i = 0; i < graphRec.links.length; i++) {
+      if (graphRec.links[i].value > thresh) {graph.links.push(graphRec.links[i]);}
+    }
+    restart();
+}
+
+
+//Restart the visualisation after any node and link changes
+
+function restart() {
+  console.log("in restart");
+  link = link.data(graph.links).style("stroke-width", function(d) { return d.value*10; }).on('click',function(d){
+      document.getElementById("firstDoc").value = d['source']['name'];
+      document.getElementById("secondDoc").value = d['target']['name'];
+      document.getElementById("result").innerHTML = d.value;
+    });
+  link.append("title")
+    .text(function(d) { return d.value;});
+
+  link.exit().remove();
+  link.enter().insert("line", ".node").attr("class", "link");
+  node = node.data(graph.nodes);
+  node.enter().insert("circle", ".cursor").attr("class", "node").attr("r", 5).call(force.drag);
+  force.start();
+}
+//end threshold.
+
+var fill = d3.scale.category20();
+
+var obj = {{wordcloud|safe}}
+
+  d3.layout.cloud().size([300, 300])
+      .words(obj)
+      .padding(5)
+      .rotate(function() { return ~~(Math.random() * 2) * 90; })
+      .font("Impact")
+      .fontSize(function(d) { return d.size; })
+      .on("end", draw)
+      .start();
+
+  function draw(words) {
+    d3.select(".wordcloud").append("svg")
+        .attr("width", 450)
+        .attr("height", 450)
+      .append("g")
+        .attr("transform", "translate(150,150)")
+      .selectAll("text")
+        .data(words)
+      .enter().append("text")
+        .style("font-size", function(d) { return d.size + "px"; })
+        .style("font-family", "Impact")
+        .style("fill", function(d, i) { return fill(i); })
+        .attr("text-anchor", "middle")
+        .attr("transform", function(d) {
+          return "translate(" + [d.x, d.y] + ")rotate(" + d.rotate + ")";
+        })
+        .text(function(d) { return d.text; });
+  }
+
+</script>
+</body>

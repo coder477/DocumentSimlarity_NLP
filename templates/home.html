@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<!--
+		The Styling on the page is not important at this point of time.
+		Avoid spending much time on it.
+-->
+<html>
+<head>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+	<style>
+	h1 {
+		font-size: 64px;
+		font-weight: 300;
+		letter-spacing: -2px;
+		margin: .3em 0 .1em 0;
+	}
+	body {
+		font-family: "Helvetica Neue", Helvetica, sans-serif;
+		margin: 1em auto 4em auto;
+		position: relative;
+		tab-size: 2;
+		width: 960px;
+	}
+	.page-header {
+		border-bottom:1px solid rgba(238, 238, 238, 0);
+	}
+	.params{
+		font-weight: 0;
+		margin: .3em 0 .1em 0;
+		padding-top: 30px;
+	}
+
+	label {
+		font-size: 17px;
+		width:180px;
+		clear:left;
+		text-align:left;
+		padding-right:10px;
+		float:right;
+	}
+
+	input, label {
+		float:left;
+	}
+	.form-elem{
+		padding-top: 20px;
+	}
+	</style>
+</head>
+<body background="{{ url_for('static', filename='background.png') }}">
+	<div class= "page-header">
+		<h1>Document Similarity</h1>
+	</div>
+	<form id="form" action="/visual" method="post">
+		<div class="form-elem">
+			<label>
+				<span class="params">Algorithm </span>
+			</label>
+			<select name="algorithm">
+				<option value="TF-IDF">TF-IDF</option>
+				<option value="LSI">LSI</option>
+				<option value="WORD NET">WORD NET</option>
+				<option value="WORD2VEC">WORD2VEC</option>
+			</select>
+		</div>
+
+		<p></p>
+		<div class="form-elem">
+			<label>
+				<span class="params">Level</span>
+			</label>
+			<select name="level">
+				<option value="sentence">Sentence</option>
+				<option value="document">Document</option>
+			</select>
+		</div>	
+		<p></p>
+		<div class="form-elem">
+			<label>
+				<span class="params">Number of Docs</span>
+			</label>
+			<input name="num-of-docs" type="number" name="quantity" min="1" onchange="addTextarea(this.value)">
+		</div>	
+
+		<p></p>
+		<div class="row" style="padding-top:80px">
+			<div id="ta">
+			</div>
+		</div>
+		<p></p>
+		<button type="submit" id="sub" class="btn btn-default">SUBMIT</button>
+	</form>
+</body>
+<script type="text/javascript">
+addTextarea(0);
+function addTextarea(value)
+{
+	// function shall not operate in this fashion anny text input will be lost when changed
+	// creating shall not create every element each time.
+	var a  = document.getElementById("ta");
+	var i=0;
+	a.innerHTML="";
+	for(i=1; i<=value; i++){
+		a.innerHTML+='<textarea '+'name="document'+i.toString()+'"'+'cols="40" rows="10" style="margin-left:3px"></textarea>'
+	}
+	if(a.innerHTML==""){
+		document.getElementById("sub").style.display="none"
+	}
+	else{
+		document.getElementById("sub").style.display="block"
+	}
+}
+</script>
+</html>
